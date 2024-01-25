@@ -1,18 +1,15 @@
-from loader import bot
+from loader import bot, db, photo_uploader
 
 from vkbottle.bot import Message, rules
-from vkbottle import PhotoMessageUploader
 
 from vkbottle import Keyboard, KeyboardButtonColor, Text
 from states import states_reg, ctx
 from keyboards.default import kb_self_gender, kb_find_gender, kb_city, kb_show_profile
 
-from loader import db
-
 import requests
 
 
-@bot.on.private_message(lev="Создать Анкету!")
+@bot.on.private_message(lev=["Создать Анкету!","👤 Новая Анкета"])
 async def handler(message):
     user_data = await bot.api.users.get(message.from_id)
     kb_self_name = (
@@ -40,9 +37,12 @@ async def handler(message):
 
 @bot.on.private_message(state=states_reg.GENDER)
 async def handler(message):
-    ctx.set("gender",message.text)
+    if message.text == "Я Парень":
+        ctx.set("gender","male")
+    else:
+        ctx.set("gender","female")
     await bot.state_dispenser.set(message.peer_id, states_reg.PHOTO)
-    return 'Фотку 👀!'
+    await message.answer('Теперь пришли мне свою самую прекрасную фоточку 😍')
 
 
 @bot.on.private_message(rules.AttachmentTypeRule(["photo"]),state=states_reg.PHOTO)
@@ -50,14 +50,10 @@ async def handler(message):
     url = (message.attachments[0].photo.sizes[-5].url)
     response = requests.get(url)
     if response.status_code == 200: 
-        with open(f'./media/users/{message.from_id}.jpg', 'wb') as f:
+        with open(f'media/users/{message.from_id}.jpg', 'wb') as f:
             f.write(response.content)
-        ctx.set("photo",f'./media/users/{message.from_id}.jpg')
+        ctx.set("photo",f'media/users/{message.from_id}.jpg')
         name = ctx.get("name")
-        #age = ctx.get("age")
-        #gender = ctx.get("gender")
-        #await message.answer(f"{name},{age},{gender}")
-        #await bot.state_dispenser.delete(message.peer_id)
         await message.answer(f"{name}, расскажи немного о себе!\n\nА исскуственный интеллект поможет подобрать тебе пару, на основе твоей анкеты 😉")
         await bot.state_dispenser.set(message.peer_id, states_reg.CONTENT)
 
@@ -85,7 +81,7 @@ async def handler(message):
 
 @bot.on.private_message(state=states_reg.CITY)
 async def handler(message):
-    ctx.set("city",message.text)
+    ctx.set("city",message.text.lower())
     await message.answer("Анкета создана! Давай посмотрим на твой профиль 👀", keyboard=kb_show_profile)
     db.add_user(message.from_id,
         ctx.get('name'),

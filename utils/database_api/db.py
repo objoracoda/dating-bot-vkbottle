@@ -48,4 +48,4 @@ class Database:
 
     def clear_likes(self,user_id):
         with self.connection:
-            return self.cursor.execute("UPDATE `users` SET `likes`='' WHERE `user_id` = ?", (user_id,))
+            return self.cursor.execute("UPDATE `users` SET `likes`=? WHERE `user_id` = ?", (None,user_id,))
